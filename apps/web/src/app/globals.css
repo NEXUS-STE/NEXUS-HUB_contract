@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ─── NEXUS-HUB Design Tokens ─────────────────────────────── */
+:root {
+  /* Palette */
+  --color-shell:     #0A0F1E;
+  --color-surface:   #111827;
+  --color-surface-2: #1A2335;
+  --color-border:    #1E2D45;
+  --color-border-2:  #253550;
+
+  /* Accent — electric cyan (money in motion) */
+  --color-accent:       #00D4FF;
+  --color-accent-dim:   #00D4FF22;
+  --color-accent-glow:  #00D4FF44;
+
+  /* Semantic */
+  --color-success:  #10B981;
+  --color-warning:  #F59E0B;
+  --color-error:    #EF4444;
+  --color-purple:   #8B5CF6;
+
+  /* Text */
+  --color-text-primary:  #F0F6FF;
+  --color-text-secondary:#94A3B8;
+  --color-text-muted:    #475569;
+
+  /* Mono font for amounts/hashes */
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+/* ─── Base ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-family: var(--font-sans);
+  background-color: var(--color-shell);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100dvh;
+  background-color: var(--color-shell);
+}
+
+/* ─── Amount Typography ─────────────────────────────────────── */
+.amount {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.hash {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
+}
+
+/* ─── Balance Pulse Animation ───────────────────────────────── */
+@keyframes balance-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-accent-glow); }
+  50%       { box-shadow: 0 0 0 12px transparent; }
+}
+
+.balance-pulse {
+  animation: balance-pulse 3s ease-in-out infinite;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent-dim); }
+
+/* ─── Focus ─────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Status Badges ─────────────────────────────────────────── */
+.badge-funded    { color: var(--color-accent);   background: var(--color-accent-dim); }
+.badge-released  { color: var(--color-success);  background: #10B98122; }
+.badge-disputed  { color: var(--color-warning);  background: #F59E0B22; }
+.badge-cancelled { color: var(--color-error);    background: #EF444422; }
+.badge-pending   { color: var(--color-text-secondary); background: #94A3B822; }
+.badge-refunded  { color: var(--color-purple);   background: #8B5CF622; }
+
+/* ─── Glassmorphism card ─────────────────────────────────────── */
+.glass-card {
+  background: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .balance-pulse { animation: none; }
+  * { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "nexus-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NEXUS-HUB — Trustless Payments Orchestration for Marketplaces",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/worker\"",
+    "build": "npm run build --workspaces --if-present",
+    "prisma:generate": "npm run generate --workspace=packages/database",
+    "prisma:migrate": "npm run migrate --workspace=packages/database",
+    "prisma:studio": "npm run studio --workspace=packages/database",
+    "lint": "eslint \"apps/**/*.ts\" \"packages/**/*.ts\"",
+    "test": "npm run test --workspaces --if-present",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.0"
+  }
+}
