@@ -433,7 +433,7 @@ fn test_cancel_pending_escrow() {
         &make_milestone_hash(&t.env), &make_description(&t.env, "Cancel test"), &0u32, &0u32, &0u32,
     );
 
-    t.contract().cancel(&escrow_id);
+    t.contract().cancel(&escrow_id, &t.client);
 }
 
 #[test]
@@ -450,7 +450,7 @@ fn test_cancel_funded_escrow_fails() {
     token_client.approve(&t.client, &t.contract_id, &100_000_000i128, &10000u32);
     t.contract().fund(&escrow_id);
 
-    let result = t.contract().try_cancel(&escrow_id);
+    let result = t.contract().try_cancel(&escrow_id, &t.client);
     assert_eq!(result, Err(Ok(EscrowError::InvalidStatus)));
 }
 
@@ -800,4 +800,142 @@ fn test_approve_release_idempotent_approval() {
     // Escrow is now Released. A second approval attempt must fail with InvalidStatus.
     let result = t.contract().try_approve_release(&escrow_id, &t.client);
     assert_eq!(result, Err(Ok(EscrowError::InvalidStatus)));
+}
+
+// ─── Improvement Tests ────────────────────────────────────────────────────────
+
+#[test]
+fn test_cancel_by_admin() {
+    let t = setup();
+    let escrow_id = make_escrow_id(&t.env, "cancel-admin");
+
+    t.contract().init_escrow(
+        &escrow_id, &t.client, &t.freelancer, &t.token, &100_000_000i128,
+        &make_milestone_hash(&t.env), &make_description(&t.env, "Admin cancel"), &0u32, &0u32, &0u32,
+    );
+
+    // Admin is allowed to cancel a Pending escrow.
+    t.contract().cancel(&escrow_id, &t.admin);
+
+    let result = t.contract().try_get_escrow(&escrow_id);
+    use nexus_escrow::types::EscrowStatus;
+    let record = result.unwrap().unwrap();
+    assert_eq!(record.status, EscrowStatus::Cancelled);
+}
+
+#[test]
+fn test_cancel_unauthorized_fails() {
+    let t = setup();
+    let escrow_id = make_escrow_id(&t.env, "cancel-unauth");
+
+    t.contract().init_escrow(
+        &escrow_id, &t.client, &t.freelancer, &t.token, &100_000_000i128,
+        &make_milestone_hash(&t.env), &make_description(&t.env, "Stranger cancel"), &0u32, &0u32, &0u32,
+    );
+
+    let stranger = Address::generate(&t.env);
+    let result = t.contract().try_cancel(&escrow_id, &stranger);
+    assert_eq!(result, Err(Ok(EscrowError::Unauthorized)));
+}
+
+#[test]
+fn test_activate_paused_fails() {
+    let t = setup();
+    let escrow_id = make_escrow_id(&t.env, "act-paused");
+
+    t.contract().init_escrow(
+        &escrow_id, &t.client, &t.freelancer, &t.token, &100_000_000i128,
+        &make_milestone_hash(&t.env), &make_description(&t.env, "Activate when paused"), &0u32, &0u32, &0u32,
+    );
+
+    let token_client = TokenClient::new(&t.env, &t.token);
+    token_client.approve(&t.client, &t.contract_id, &100_000_000i128, &10000u32);
+    t.contract().fund(&escrow_id);
+
+    t.contract().set_paused(&true);
+
+    let result = t.contract().try_activate(&escrow_id);
+    assert_eq!(result, Err(Ok(EscrowError::ContractPaused)));
+}
+
+#[test]
+fn test_get_admin_view() {
+    let t = setup();
+    let admin = t.contract().get_admin();
+    assert_eq!(admin, t.admin);
+}
+
+#[test]
+fn test_transfer_admin() {
+    let t = setup();
+    let new_admin = Address::generate(&t.env);
+
+    t.contract().transfer_admin(&new_admin);
+
+    // get_admin should now return the new admin address.
+    let current = t.contract().get_admin();
+    assert_eq!(current, new_admin);
+
+    // Old admin can no longer call admin-only operations (set_fee fails without auth).
+    // With mock_all_auths, a new call to set_fee is authorised by whoever holds the key —
+    // here we just verify the stored admin changed.
+    assert_ne!(current, t.admin);
+}
+
+#[test]
+fn test_init_escrow_past_expiry_fails() {
+    let t = setup();
+    // Advance so the ledger sequence is non-zero, then use the current sequence
+    // as expiry_ledger — equal-to-current is not strictly future, so InvalidExpiry.
+    t.env.ledger().set(LedgerInfo {
+        sequence_number: 100,
+        timestamp: t.env.ledger().timestamp() + 600,
+        ..t.env.ledger().get()
+    });
+    let past_expiry = t.env.ledger().sequence(); // 100 <= 100 → invalid
+    let result = t.contract().try_init_escrow(
+        &make_escrow_id(&t.env, "past-expiry"),
+        &t.client, &t.freelancer, &t.token, &100_000_000i128,
+        &make_milestone_hash(&t.env), &make_description(&t.env, "Past expiry"),
+        &0u32, &0u32, &past_expiry,
+    );
+    assert_eq!(result, Err(Ok(EscrowError::InvalidExpiry)));
+}
+
+#[test]
+fn test_init_escrow_delay_too_large_fails() {
+    let t = setup();
+    // MAX_EXTRA_DISPUTE_DELAY = 2_592_000; anything above should fail.
+    let result = t.contract().try_init_escrow(
+        &make_escrow_id(&t.env, "big-delay"),
+        &t.client, &t.freelancer, &t.token, &100_000_000i128,
+        &make_milestone_hash(&t.env), &make_description(&t.env, "Big delay"),
+        &2_592_001u32, &0u32, &0u32,
+    );
+    assert_eq!(result, Err(Ok(EscrowError::InvalidDelay)));
+}
+
+#[test]
+fn test_dispute_resets_approvals() {
+    let t = setup();
+    let amount = 100_000_000i128;
+    let escrow_id = init_and_fund(&t, "dispute-reset", amount);
+
+    // Client approves — client_approved = true.
+    t.contract().approve_release(&escrow_id, &t.client);
+    let record = t.contract().get_escrow(&escrow_id);
+    assert!(record.client_approved);
+
+    // Client raises a dispute — approvals must be cleared.
+    t.contract().raise_dispute(&escrow_id, &t.client);
+
+    // Admin resolves in favour of freelancer.
+    t.contract().resolve_dispute(&escrow_id, &true);
+
+    // Verify the escrow is Released (dispute resolved correctly despite prior approval).
+    use nexus_escrow::types::EscrowStatus;
+    let record = t.contract().get_escrow(&escrow_id);
+    assert_eq!(record.status, EscrowStatus::Released);
+    assert!(!record.client_approved);
+    assert!(!record.freelancer_approved);
 }

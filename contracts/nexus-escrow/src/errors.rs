@@ -48,4 +48,11 @@ pub enum EscrowError {
     /// claim_expired was called but expiry_ledger has not been reached yet,
     /// or expiry_ledger is 0 (no expiry set).
     EscrowNotExpired = 13,
+
+    /// expiry_ledger is non-zero but is not strictly in the future at the time
+    /// init_escrow is called (would expire immediately or has already passed).
+    InvalidExpiry = 14,
+
+    /// dispute_delay exceeds the maximum allowed extra delay.
+    InvalidDelay = 15,
 }

@@ -88,6 +88,14 @@ pub fn emit_milestone_completed(env: &Env, escrow_id: &Bytes, completed: u32, to
     );
 }
 
+/// Emitted when the contract admin address is rotated to a new address.
+pub fn emit_admin_transferred(env: &Env, old_admin: &Address, new_admin: &Address) {
+    env.events().publish(
+        (symbol_short!("adm_xfer"),),
+        (old_admin.clone(), new_admin.clone()),
+    );
+}
+
 /// Emitted on every approve_release call, regardless of whether release triggers.
 /// Maps to → internal multi-sig progress signal.
 pub fn emit_approval_recorded(
