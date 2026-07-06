@@ -87,6 +87,16 @@ bindings: build
 		--overwrite
 	@echo "Bindings written to apps/web/src/lib/contracts/nexus-escrow"
 
+.PHONY: bindings-worker
+bindings-worker: build
+	@echo "Generating TypeScript bindings for worker..."
+	stellar contract bindings typescript \
+		--wasm $(WASM_PATH) \
+		--contract-id $(CONTRACT_ID) \
+		--output-dir ../apps/worker/src/stellar/bindings \
+		--overwrite
+	@echo "Bindings written to apps/worker/src/stellar/bindings"
+
 # ─── Lint ─────────────────────────────────────────────────────────────────────
 
 .PHONY: lint
