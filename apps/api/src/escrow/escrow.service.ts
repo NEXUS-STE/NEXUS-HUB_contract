@@ -150,8 +150,9 @@ export class EscrowService {
 
     if (role === 'CLIENT' && escrow.clientId !== userId) throw new ForbiddenException('Not your escrow');
     if (role === 'FREELANCER' && escrow.freelancerId !== userId) throw new ForbiddenException('Not your escrow');
+    // Mirrors the contract: approve_release panics with InvalidStatus on Disputed/Released/etc.
     if (!['FUNDED', 'ACTIVE'].includes(escrow.status)) {
-      throw new BadRequestException(`Cannot approve release for escrow in status: ${escrow.status}`);
+      throw new BadRequestException(`Cannot approve release for escrow in status: ${escrow.status}. Disputed escrows must be resolved by the admin first.`);
     }
 
     await this.escrowQueue.add(
