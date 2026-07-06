@@ -80,6 +80,8 @@ enum WebhookEvent {
   ESCROW_FUNDED
   ESCROW_RELEASED
   ESCROW_REFUNDED
+  ESCROW_EXPIRED
+  MILESTONE_COMPLETED
   WITHDRAWAL_COMPLETED
   WITHDRAWAL_FAILED
   DISPUTE_OPENED
@@ -105,8 +107,9 @@ model User {
   status        UserStatus @default(PENDING_VERIFICATION)
   firstName     String
   lastName      String
-  airtmAccountId String?  @unique
-  stellarPublicKey String? @unique
+  airtmAccountId           String?  @unique
+  stellarPublicKey         String?  @unique
+  stellarSecretEncrypted   String?
 
   balance       Balance?
   transactions  Transaction[]
@@ -189,8 +192,16 @@ model Escrow {
   status              EscrowStatus @default(PENDING)
   description         String
   milestoneTitle      String?
-  stellarContractId   String?      @unique  // Trustless Work contract address
+  milestoneHash       String?
+  stellarContractId   String?      @unique
   stellarTxHash       String?
+
+  // Mirror of on-chain EscrowRecord fields kept in sync by the worker
+  milestonesTotal     Int          @default(0)
+  milestonesCompleted Int          @default(0)
+  expiryLedger        Int          @default(0)
+  clientApproved      Boolean      @default(false)
+  freelancerApproved  Boolean      @default(false)
 
   transactions        Transaction[]
   dispute             Dispute?
@@ -198,6 +209,7 @@ model Escrow {
   releasedAt          DateTime?
   refundedAt          DateTime?
   fundedAt            DateTime?
+  expiredAt           DateTime?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
