@@ -301,4 +301,26 @@ export class EscrowService {
 
     return { data, total, page, limit, pages: Math.ceil(total / limit) };
   }
+
+  // ─── Admin: transfer on-chain admin ──────────────────────────────────────
+
+  async transferAdmin(adminId: string, escrowId: string) {
+    const escrow = await this.prisma.escrow.findUnique({ where: { id: escrowId } });
+    if (!escrow) throw new NotFoundException('Escrow not found');
+    if (!escrow.stellarContractId) throw new BadRequestException('Escrow has no on-chain contract yet');
+
+    // The actual key rotation is handled by the worker (admin keypair calls transfer_admin).
+    // We log the intent here; the worker enqueues the Soroban call.
+    await this.prisma.auditLog.create({
+      data: {
+        userId: adminId,
+        action: 'TRANSFER_ADMIN_INITIATED',
+        entity: 'Escrow',
+        entityId: escrowId,
+        newValues: { requestedBy: adminId },
+      },
+    });
+
+    return { message: 'Admin transfer initiated. The worker will rotate the on-chain admin keypair.' };
+  }
 }

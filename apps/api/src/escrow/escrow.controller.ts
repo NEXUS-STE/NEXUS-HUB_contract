@@ -158,4 +158,17 @@ export class EscrowController {
   ) {
     return this.escrowService.refundEscrow(adminId, escrowId, dto);
   }
+
+  // ─── Admin: transfer contract admin ────────────────────────────────────────
+
+  @Post(':id/transfer-admin')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Admin: rotate the on-chain NexusEscrow admin keypair' })
+  @ApiParam({ name: 'id', type: String })
+  transferAdmin(
+    @CurrentUser('id') adminId: string,
+    @Param('id', ParseUUIDPipe) escrowId: string,
+  ) {
+    return this.escrowService.transferAdmin(adminId, escrowId);
+  }
 }
