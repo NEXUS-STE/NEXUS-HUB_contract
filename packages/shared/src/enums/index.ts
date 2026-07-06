@@ -65,6 +65,8 @@ export enum WebhookEvent {
   ESCROW_FUNDED = 'ESCROW_FUNDED',
   ESCROW_RELEASED = 'ESCROW_RELEASED',
   ESCROW_REFUNDED = 'ESCROW_REFUNDED',
+  ESCROW_EXPIRED = 'ESCROW_EXPIRED',
+  MILESTONE_COMPLETED = 'MILESTONE_COMPLETED',
   WITHDRAWAL_COMPLETED = 'WITHDRAWAL_COMPLETED',
   WITHDRAWAL_FAILED = 'WITHDRAWAL_FAILED',
   DISPUTE_OPENED = 'DISPUTE_OPENED',
@@ -85,6 +87,9 @@ export enum JobName {
   FUND_ESCROW = 'fund_escrow',
   RELEASE_ESCROW = 'release_escrow',
   REFUND_ESCROW = 'refund_escrow',
+  APPROVE_RELEASE = 'approve_release',
+  COMPLETE_MILESTONE = 'complete_milestone',
+  CLAIM_EXPIRED = 'claim_expired',
   DELIVER_WEBHOOK = 'deliver_webhook',
   RETRY_WEBHOOK = 'retry_webhook',
 }
