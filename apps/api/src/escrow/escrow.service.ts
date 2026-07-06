@@ -309,18 +309,39 @@ export class EscrowService {
     if (!escrow) throw new NotFoundException('Escrow not found');
     if (!escrow.stellarContractId) throw new BadRequestException('Escrow has no on-chain contract yet');
 
-    // The actual key rotation is handled by the worker (admin keypair calls transfer_admin).
-    // We log the intent here; the worker enqueues the Soroban call.
+    // Rotate all webhook endpoint secrets for the client and freelancer so that
+    // any third-party integration using the old admin credentials cannot spoof
+    // events after the key rotation completes.
+    const affectedUserIds = [escrow.clientId, escrow.freelancerId];
+    const endpointsToRotate = await this.prisma.webhookEndpoint.findMany({
+      where: { userId: { in: affectedUserIds }, isActive: true },
+    });
+
+    await Promise.all(
+      endpointsToRotate.map((ep) =>
+        this.prisma.webhookEndpoint.update({
+          where: { id: ep.id },
+          data: { secret: require('crypto').randomBytes(32).toString('hex') },
+        }),
+      ),
+    );
+
     await this.prisma.auditLog.create({
       data: {
         userId: adminId,
         action: 'TRANSFER_ADMIN_INITIATED',
         entity: 'Escrow',
         entityId: escrowId,
-        newValues: { requestedBy: adminId },
+        newValues: {
+          requestedBy: adminId,
+          webhookSecretsRotated: endpointsToRotate.length,
+        },
       },
     });
 
-    return { message: 'Admin transfer initiated. The worker will rotate the on-chain admin keypair.' };
+    return {
+      message: 'Admin transfer initiated. On-chain key rotation queued; webhook secrets rotated.',
+      webhookSecretsRotated: endpointsToRotate.length,
+    };
   }
 }
