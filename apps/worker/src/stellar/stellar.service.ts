@@ -125,7 +125,7 @@ export class StellarService implements OnModuleInit {
       nativeToScVal(Buffer.from(params.milestoneHash, 'hex'), { type: 'bytes' }),
       nativeToScVal(params.description, { type: 'string' }),
       nativeToScVal(params.disputeDelay, { type: 'u32' }),
-      nativeToScVal(params.milestodesTotal ?? 0, { type: 'u32' }),
+      nativeToScVal(params.milestonesTotal ?? 0, { type: 'u32' }),
       nativeToScVal(params.expiryLedger, { type: 'u32' }),
     ];
 
